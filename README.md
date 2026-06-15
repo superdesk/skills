@@ -1,0 +1,1 @@
+Superdesk AI Skills
