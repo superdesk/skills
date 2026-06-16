@@ -189,9 +189,22 @@ npx playwright test playwright/<feature>/<scenario>.spec.ts --headed
 ```
 
 Watch it execute. The user is probably watching too, that's the point of
-`--headed`. Do **not** run the full suite (`npm run playwright`) to validate
-one spec; it's slow and may surface unrelated existing flakes. Do **not**
-run `npm test` at the repo root, that target is unit tests + lint, not e2e.
+`--headed`.
+
+For interactive, step-by-step verification, the user can run the spec in UI
+mode, which shows a per-action timeline and the DOM snapshot at every step:
+
+```
+npx playwright test playwright/<feature>/<scenario>.spec.ts --ui
+```
+
+UI mode is for the user to watch (see step 9 for how to use it to confirm
+intent). It is long-running and interactive, so if you start it for them, launch
+it as a background process; never run it in the foreground, that blocks.
+
+Do **not** run the full suite (`npm run playwright`) to validate one spec; it's
+slow and may surface unrelated existing flakes. Do **not** run `npm test` at the
+repo root, that target is unit tests + lint, not e2e.
 
 ### 8. Iterate until it passes deterministically
 
@@ -214,12 +227,25 @@ the underlying race or to leave the spec out for now.
 
 After the spec passes deterministically:
 
-- **Make the user confirm intent before declaring done.** A passing spec
-  can still exercise the wrong code path (an assertion on a toast that
-  appeared for an unrelated reason; a click that hit a different button
-  than intended). Either the user watches the `--headed` run live, or you
-  hand them the trace and ask them to scrub through it. The signal you
-  trust is "yes, that matched what I meant", not the green check.
+- **Make the user verify it in the browser before declaring done.** A passing
+  spec can still exercise the wrong code path (an assertion on a toast that
+  appeared for an unrelated reason; a click that hit a different button than
+  intended). The most reliable check is Playwright UI mode. Offer to open it for
+  them, ask something like "Do you want me to open the test in UI mode so you can
+  verify it?", and if they accept, launch it as a **background** process (it is
+  long-running and interactive; in the foreground it would block):
+
+  ```
+  npx playwright test playwright/<feature>/<scenario>.spec.ts --ui
+  ```
+
+  The UI window opens on their screen (this assumes the skill is running locally,
+  which it is). Tell them what to look for: press play, then scrub the per-action
+  timeline and confirm, on the DOM snapshot at each step, that it clicked the
+  controls they meant, typed the right data, and landed on the expected screen.
+  If they would rather run it themselves, give them the command instead. (A
+  `--headed` re-run or the trace viewer also work.) The signal you trust is the
+  user saying "yes, that matched what I meant", not the green check.
 - **Summarise for them**, in plain language: which file you created, what
   it tests, where the trace is (`test-results/.../trace.zip`), and any
   `data-test-id` attributes you added to product source. Call the product
