@@ -10,10 +10,10 @@ All skills in this repo:
 npx skills add superdesk/skills
 ```
 
-A single skill:
+A single skill (use the `--skill` flag):
 
 ```
-npx skills add superdesk/skills/superdesk-e2e
+npx skills add superdesk/skills --skill superdesk-e2e
 ```
 
 ## Available skills

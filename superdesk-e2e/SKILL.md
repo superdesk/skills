@@ -374,8 +374,8 @@ proceed with a failing test that documents the expected behaviour.
   `AskUserQuestion`.
 - Ambiguity about *how* to translate to Playwright → don't ask, pattern-
   match from existing specs.
-- A genuinely new product behavior with no existing test pattern → ask
+- A genuinely new product behaviour with no existing test pattern → ask
   before writing structure from scratch.
 - A failing spec where the failure is in the test code → fix it, don't ask.
 - A failing spec where the failure looks like a product bug → stop, tell
-  the user. Do not file an issue or change product behavior.
+  the user. Do not file an issue or change product behaviour.
