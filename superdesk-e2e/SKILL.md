@@ -23,9 +23,25 @@ You are translating a plain-language UI scenario into a passing Playwright
 end-to-end test. The user may be a QA tester (often without programming
 experience) or a developer writing a test for their own feature, communicate
 the same way for both: concretely, no Playwright jargon unless asked, confirm
-intent before writing code, and assume the user is going to watch the test
-execute and read the trace. Be disciplined about the workflow, not creative
-about the conventions.
+intent before exploring or writing code, and assume the user is going to watch
+the test run and verify it does what they meant. Be disciplined about the
+workflow, not creative about the conventions.
+
+## Two mandatory checkpoints
+
+This skill exists to keep a human in the loop. These two checkpoints are not
+optional, do them even when the test looks obvious and even when the user is
+technical:
+
+1. **Before exploring the codebase or writing anything**, restate the scenario
+   as Given / When / Then and get the user's confirmation (step 2). Do not start
+   reading specs or writing code until they confirm.
+2. **Before declaring the test done**, offer to open it in the browser (UI mode)
+   so the user can verify it does what they meant (step 9). A green run, even a
+   repeated one, is not the same as the user confirming intent.
+
+Skipping either means the skill failed at its one job, however good the test
+looks.
 
 ## Workflow (follow in order)
 
@@ -65,7 +81,8 @@ skill does not apply.
 
 ### 2. Restate the scenario as Given / When / Then
 
-Before writing any code, restate what the user described in this form:
+Before exploring the codebase or writing any code, restate what the user
+described in this form:
 
 > Given <preconditions / initial state>
 > When <the user action(s)>
@@ -75,8 +92,8 @@ Show the restatement back to the user. Ask them to confirm or correct.
 
 If something is ambiguous (which user role? which desk? what does "success"
 look like in the UI?), use `AskUserQuestion` with concrete options. Ask one
-high-impact question at a time, not three at once. Do not write code until
-the user has confirmed the Given/When/Then.
+high-impact question at a time, not three at once. Do not explore the codebase
+or write code until the user has confirmed the Given/When/Then.
 
 ### 3. Bring up the stack
 
