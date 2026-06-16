@@ -1,0 +1,13 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Superdesk",
+      "description": "A collection of AI agent skills for working with Superdesk projects.",
+      "skills": [
+        "superdesk-e2e"
+      ]
+    }
+  ]
+}
