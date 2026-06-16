@@ -43,8 +43,9 @@ The answer affects:
 
 - **Bootstrap script path.** Client-core: `./e2e/scripts/e2e-up.sh`.
   Planning may live elsewhere, check `e2e/scripts/` first, then `scripts/`.
-- **Where new specs go.** Client-core: `e2e/client/playwright/<feature>/`.
-  Planning: `e2e/playwright/<feature>/`.
+- **Where new specs go.** Flat, no per-feature subfolders. Client-core:
+  `e2e/client/playwright/`. Planning: `e2e/playwright/`. Name the file per
+  `WRITING_TESTS.md` (`<scenario>.spec.ts`).
 - **Playwright invocation directory.** Client-core: `e2e/client/`. Planning:
   `e2e/`.
 - **State reset differs by repo.** client-core: `restoreDatabaseSnapshot()`
@@ -185,7 +186,7 @@ changes**, if more is needed, see "Failure modes" below.
 From the playwright invocation directory identified in step 1:
 
 ```
-npx playwright test playwright/<feature>/<scenario>.spec.ts --headed
+npx playwright test playwright/<scenario>.spec.ts --headed
 ```
 
 Watch it execute. The user is probably watching too, that's the point of
@@ -195,7 +196,7 @@ For interactive, step-by-step verification, the user can run the spec in UI
 mode, which shows a per-action timeline and the DOM snapshot at every step:
 
 ```
-npx playwright test playwright/<feature>/<scenario>.spec.ts --ui
+npx playwright test playwright/<scenario>.spec.ts --ui
 ```
 
 UI mode is for the user to watch (see step 9 for how to use it to confirm
@@ -236,7 +237,7 @@ After the spec passes deterministically:
   long-running and interactive; in the foreground it would block):
 
   ```
-  npx playwright test playwright/<feature>/<scenario>.spec.ts --ui
+  npx playwright test playwright/<scenario>.spec.ts --ui
   ```
 
   The UI window opens on their screen (this assumes the skill is running locally,
