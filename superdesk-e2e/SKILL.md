@@ -59,9 +59,11 @@ The answer affects:
 
 - **Bootstrap script path.** Client-core: `./e2e/scripts/e2e-up.sh`.
   Planning may live elsewhere, check `e2e/scripts/` first, then `scripts/`.
-- **Where new specs go.** Flat, no per-feature subfolders. Client-core:
-  `e2e/client/playwright/`. Planning: `e2e/playwright/`. Name the file per
-  `WRITING_TESTS.md` (`<scenario>.spec.ts`).
+- **Where new specs go.** Differs by repo. Client-core: flat under
+  `e2e/client/playwright/` (no per-feature subfolders). Planning: under
+  `e2e/playwright/<feature>/` (`events/`, `planning/`, `assignments/`, ...),
+  with cross-cutting specs at the `playwright/` root. Name the file per the
+  repo's `WRITING_TESTS.md`.
 - **Playwright invocation directory.** Client-core: `e2e/client/`. Planning:
   `e2e/`.
 - **State reset differs by repo.** client-core: `restoreDatabaseSnapshot()`
