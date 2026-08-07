@@ -129,9 +129,9 @@ ports are held by someone else's stack, bring the stack up with
 `./e2e/scripts/e2e-up.sh --slot auto` instead. Both repos support this. It
 claims an isolated instance (own backend, databases and ports; shared
 elasticsearch and redis; mongo is per-slot in client-core and shared in
-planning) and writes its environment to a `.e2e-slot.env` file next to
-`playwright.config.ts` (client-core: `e2e/client/`, planning: `e2e/`), which
-the config auto-loads, so every `npx playwright ...` command in steps 3-9
+planning) and writes its environment to a slot env file (client-core:
+`e2e/client/playwright/.cache/e2e-slot.env`, planning: `e2e/.e2e-slot.env`),
+which the playwright config auto-loads, so every `npx playwright ...` command in steps 3-9
 works unchanged from this checkout. Do not export `SUPERDESK_URL` or port
 variables by hand in slot mode. Note which slot you used in your hand-off,
 and leave it running for the user's verification; it is released with
@@ -144,8 +144,10 @@ the same time (both bind mongo/redis/elastic host ports).
 work around it.** The script fails loud and actionable: it verifies the app
 bundles were actually built and that the client serves them, not just that a
 port answers. Its most common recovery instruction is to re-run with
-`--rebuild` (`./e2e/scripts/e2e-up.sh --rebuild`). Run that once. If it still
-fails, surface the script's plain-English error message to the user verbatim;
+`--rebuild` (`./e2e/scripts/e2e-up.sh --rebuild`). Run that once. Note that `--rebuild`
+fixes client build/bundle problems only; an error about docker images or
+image pulls is not a build problem and `--rebuild` cannot help there. If it
+still fails, surface the script's plain-English error message to the user verbatim;
 do not paste raw stack traces or webpack output at a QA user, and do not try
 to repair the build yourself. A non-technical user only needs the one-line
 instruction or a clear "this needs a developer because X."
