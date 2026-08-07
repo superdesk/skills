@@ -127,8 +127,9 @@ worktree's node_modules from the main checkout with `cp -Rc` on macOS or
 `npm ci` pays the full install), or the default
 ports are held by someone else's stack, bring the stack up with
 `./e2e/scripts/e2e-up.sh --slot auto` instead. Both repos support this. It
-claims an isolated instance (own backend, databases, client port; shared
-mongo/elastic) and writes its environment to a `.e2e-slot.env` file next to
+claims an isolated instance (own backend, databases and ports; shared
+elasticsearch and redis; mongo is per-slot in client-core and shared in
+planning) and writes its environment to a `.e2e-slot.env` file next to
 `playwright.config.ts` (client-core: `e2e/client/`, planning: `e2e/`), which
 the config auto-loads, so every `npx playwright ...` command in steps 3-9
 works unchanged from this checkout. Do not export `SUPERDESK_URL` or port
