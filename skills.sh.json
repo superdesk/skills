@@ -6,7 +6,8 @@
       "title": "Superdesk",
       "description": "A collection of AI agent skills for working with Superdesk projects.",
       "skills": [
-        "superdesk-e2e"
+        "superdesk-e2e",
+        "superdesk-ticket"
       ]
     }
   ]

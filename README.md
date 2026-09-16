@@ -27,12 +27,28 @@ iterates to a deterministic pass with a trace artifact for review.
 Scope: runs only inside `superdesk-client-core` or `superdesk-planning`. The
 skill detects which repo it is in and stops if it is anywhere else.
 
+### superdesk-ticket
+
+Starts work on a Jira ticket: pulls it with `acli`, writes it to the local
+`tickets/<KEY>/` directory, maps it to the right app (blueprint, stt, cp,
+belga, ansa, newsroom-app-*) and core libraries, resolves the pinned release
+branches from the app's `requirements.txt` and `client/package.json`, brings
+up standalone mongo/redis/elasticsearch containers named after the ticket,
+creates the matching pyenv, links the core checkouts, builds the client when
+the ticket is UI-facing, and runs the narrowest relevant test suite.
+
+Scope: stops at a running stack on the pinned release branch with a known
+test state. It does not create the ticket branch, write the fix, or open a PR.
+Three human checkpoints: after mapping, before installing, before testing.
+
 ## Layout
 
 Each skill is a top-level directory containing a `SKILL.md`:
 
 ```
 superdesk-e2e/
+  SKILL.md
+superdesk-ticket/
   SKILL.md
 ```
 
