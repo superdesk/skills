@@ -107,10 +107,23 @@ default port is 5002, not 5000, because macOS reserves :5000 for AirPlay
 Receiver, which silently answers HTTP and would mask a missing server.
 
 Never skip this step "to save time." If the stack is already up from
-another session, the script detects that and exits quickly. If product
-source has changed since the last build (e.g. you added a `data-test-id`
-in step 6 below), the script detects that too and rebuilds the client
-before serving.
+another session, the script detects that and exits quickly — but that
+shortcut is also a trap. When the client is **already reachable** the script
+skips the client build entirely (it logs `client already reachable; skipping
+client server start`) and keeps serving the *old* bundle. So if you changed
+product source (e.g. added a `data-test-id` in step 6) while the stack was
+already up, the change is NOT compiled in. Force it:
+`./e2e/scripts/e2e-up.sh --rebuild`.
+
+**Verify a product-source change actually took in the live DOM, not in
+`dist`.** Angular HTML templates are compiled into a JS `$templateCache`
+bundle, so a stale build renders the old template even though the attribute is
+present in the source file — and grepping `dist/` can mislead (a hit may be a
+sourcemap, and `grep ... | head && echo FOUND` always prints FOUND because
+`head` exits 0). The ground truth is the rendered page: open the item and check
+`document.querySelector('[data-test-id="..."]')`, or let the locator fail and
+read the DOM snapshot. If a new `data-test-id` "doesn't resolve" despite being
+in source, suspect a skipped rebuild first.
 
 **Drive the environment ONLY through `e2e-up.sh`.** Do not run `npm run
 build`, `docker compose up`, `npm run start-client-server`, or any other
@@ -257,9 +270,9 @@ npx playwright show-trace test-results/<run-id>/trace.zip
 ```
 
 Fix the spec, not the product, unless the failure exposes a missing
-`data-test-id` (in which case add the attribute, see step 6, and remember
-the next `e2e-up.sh` invocation will rebuild the client because the script
-detects source newer than the last build).
+`data-test-id` (in which case add the attribute, see step 6, and re-run
+`./e2e/scripts/e2e-up.sh --rebuild` so the change is compiled in — the
+script does not detect source changes on its own, see step 3).
 
 If you cannot make it pass in three runs without changes between them,
 stop. Tell the user the test appears flaky and ask whether to investigate
@@ -330,6 +343,17 @@ error, the script names the failure mode.
 - **Stack reachable but tests get auth errors:** the AirPlay false-positive
   may be back if someone set `PORT=5000`. Check `lsof -i :5002` and
   `lsof -i :5000`. Default is 5002.
+- **Stack up but a whole feature area fails (e.g. every upload dies with a
+  bare "Upload Error:"):** suspect client/server version skew before product
+  bugs or test bugs. The server Docker image (`...-e2e-server:ci`,
+  `pull_policy: never`) is built once and reused forever — `e2e-up.sh` only
+  builds it when missing — so a months-old image silently lacks API resources
+  a freshly-pulled client branch calls (watch for 404s on `/api/<resource>` in
+  the browser console). **Diagnose with a control run**: an in-repo,
+  CI-passing spec for the same feature. If the control fails too, the stack is
+  broken, not your test. Recovery: `docker compose stop server && docker
+  compose rm -f server && docker rmi superdesk-client-core-e2e-server:ci`,
+  then re-run `e2e-up.sh`, which rebuilds the image from current sources.
 
 Do not "work around" a broken stack by mocking the server or skipping
 setup. The skill only produces real tests against the real stack.
@@ -344,16 +368,47 @@ the path depends on the repo:
 - **In `superdesk-planning`:** use `addItems(...)` after `setup(...)` to add the
   state via the prepopulate API.
 - **In `superdesk-client-core`:** there is no per-test add. `restoreDatabaseSnapshot()`
-  only restores the snapshot as-is, so the state must come from the base
-  snapshot. If it doesn't, stop and tell the user:
-
-  > This scenario needs additional fixture data in the e2e snapshot:
-  > [list]. A developer needs to add it to the snapshot before this test
-  > can be written.
+  only restores a snapshot as-is, so the state must live in a snapshot. If the
+  base `main` snapshot lacks it, create a dedicated **record** (a diff on top of
+  `main`) and restore it by name — this is the documented fixture mechanism
+  (WRITING_TESTS.md "Adding fixture data", README "Managing database snapshots"),
+  and the right call whenever the alternative is building the setup by clicking
+  through the UI in the test (which a reviewer will rightly reject as slow and
+  fragile). A record alters a shared fixture: flag it in the hand-off for review
+  and add an entry to `e2e/server/dump/records/README.md`. See "Creating a
+  record" below for the operational traps. If creating it is out of scope, stop
+  and tell the user a developer needs to add the fixture.
 
 Do not try to mutate state via the UI in `beforeEach` to reach the
 preconditions, that makes the test slow, brittle, and not actually a test
 of the scenario the user described.
+
+### Creating a record (client-core fixture data)
+
+The mechanism is `storage:record`, **not** `storage:dump`. Getting this wrong
+wastes a lot of time because the failure is silent:
+
+- **Use `storage:record --base-dump main --name <name> --collection <c> ...`**:
+  it restores `main`, then records a diff of the collections you name.
+  `storage:dump` instead writes a *full* dump; `restoreDatabaseSnapshot({snapshotName})`
+  posts to `/api/restore_record`, which only resolves **records**, so restoring a
+  dump fails with HTTP 500 — *"There is no record at &lt;name&gt;"*.
+- **`restoreDatabaseSnapshot()` ignores the HTTP response**, so a failed restore
+  is silent. The tell-tale symptom is a test that **passes once and fails on
+  every rerun**: the first run inherits the state you just built by hand; later
+  runs never reset because the restore 500s. After creating a record, verify by
+  hand that the restore returns 201 and actually resets state (e.g.
+  `curl -X POST .../api/restore_record -d '{"name":"<name>"}'`).
+- **`storage:record` runs until interrupted.** It records live DB changes until
+  it gets SIGINT, when it flushes the record file. Run `manage.py` inside the
+  already-running server container (the `dump/` dir is volume-mounted, so the
+  record lands in the repo). Build the fixtures while it records — a throwaway
+  setup spec that drives the UI, or direct API calls — then send SIGINT to the
+  **python** process, not the `sh` wrapper, or nothing is written. Pass one
+  `--collection` per collection you touched so session/auth/activity churn stays
+  out of the record.
+- **Then rewrite the test** to `restoreDatabaseSnapshot({snapshotName: '<name>'})`
+  and do only the behaviour under test — no UI setup.
 
 ### The change required exceeds adding a `data-test-id`
 
@@ -379,6 +434,18 @@ the trace and confirms it matched their Given/When/Then. If they say "the
 assertion passed but that's not what I meant", treat the spec as broken
 even though Playwright says green. Iterate. The signal you trust is the
 user's confirmation, not the colour of the run.
+
+A stronger, self-contained defense is **mutation testing**: break the behaviour
+the test claims to protect, one change at a time (remove the action under test,
+disable the routing rule, skip a publish), run, and confirm the test goes *red*;
+then revert. A mutation that leaves the test green means that assertion protects
+nothing. This is also how you catch the **vacuously-passing negative control**:
+an assertion like `toHaveCount(0)` ("X did not reach Y") passes for free if X was
+never produced at all. Pair every negative assertion with a positive one that
+proves the thing genuinely happened — e.g. before asserting the item did *not*
+reach the filtered subscriber, assert it *did* reach a catch-all subscriber, so
+the negative is only evaluated once the item is really in play. Reviewers may ask
+for mutation testing by name; do it and note the mutations in the hand-off.
 
 ### The scenario reveals a product bug
 
@@ -411,6 +478,18 @@ proceed with a failing test that documents the expected behaviour.
 - **No narrating comments.** Comment only the non-obvious *why* (workarounds,
   async timing, app quirks, an unusual selector); never narrate steps or restate
   the scenario, the test title carries that. See WRITING_TESTS.md "Comments".
+- **Publishing closes the interactive actions panel asynchronously.** A second
+  publish in the same test races it: the still-closing overlay intercepts the
+  next "open send/publish pane" click (it hangs), or a reused stale panel
+  publishes the wrong, already-changed item — *"Item has changed since it was
+  opened."* Have the publish Page-Object method wait for the panel to be hidden
+  (`await expect(panel).toBeHidden()`) before returning, so the next interaction
+  starts clean. (This is also why `publish()` should own the "Save and send"
+  confirm rather than each caller re-handling it.)
+- **The publish queue — and any list read only on page load — will not show a
+  row that lands after navigation.** Reload-poll instead of waiting out a stale
+  page: `await expect(async () => { await page.goto(url); await expect(row).toBeVisible({timeout: 2000}); }).toPass()`. A single long `toBeVisible` just
+  burns its timeout on a page that never refreshes itself.
 
 ## When to ask vs when to proceed
 
